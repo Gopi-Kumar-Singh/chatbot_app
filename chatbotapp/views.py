@@ -5,13 +5,17 @@ from django.utils import timezone
 from datetime import timedelta
 import csv
 
-# Apply the generate_tags function to create the 'tags' column
-# faq_database['tags'] = faq_database.apply(lambda row: generate_tags(row['questions'], row['answers']), axis=1)
+
+#Apply the generate_tags function to create the 'tags' column of all the current question and answer if tags are not added
+def generateAllTags():
+    if 'tags' not in faq_database.columns:
+        faq_database['tags'] = faq_database.apply(lambda row: generate_tags(row['questions'], row['answers']), axis=1)
+        faq_database.to_csv(faq_database_csv_path, index=False)
 
 # initializing vectorizer
 vectorizer = TfidfVectorizer()
 
-# Fit and transform the tags of stored queries
+# Fit and transform the tags of stored queries in faq database
 stored_tags_vector = vectorizer.fit_transform(faq_database['tags'])
 
 
@@ -44,7 +48,7 @@ def integrate_faq_database(faq_database):
 def handle_user_feedback(user_query, bot_response, user_feedback):
     if user_feedback == 'Yes':
         # saving the response of the faq if it is given by doubt assistant and user is satisfied with it
-        save_faq_to_faq_database(user_query, bot_response);
+        save_faq_to_faq_database(user_query, bot_response)
         # ending the session as the user is satisfied
         return random.choice(positive_feedback_responses) + " " + feedback_suffix
 
@@ -59,9 +63,7 @@ def handle_user_feedback(user_query, bot_response, user_feedback):
 
 def get_response_from_faq_database(user_query):
     # user query preprocessing
-    print("before preprocessing : " + user_query)
     preprocessed_user_query = preprocess_text(user_query)
-    print("after preprocessing : " + preprocessed_user_query)
 
     # Transform user query
     user_query_vector = vectorizer.transform([preprocessed_user_query])
@@ -74,17 +76,25 @@ def get_response_from_faq_database(user_query):
     most_similar_score = similarities[0][most_similar_index]
 
     if most_similar_score < threshold_value:
-        # fallback to doubt assistant
-        doubt_assistants_response = fallback_to_doubt_assistant(user_query, "", "")
-        return doubt_assistants_response
+
+        if find_pattern(greeting_pattern, user_query):
+            return if_user_message_contains_greeting
+        elif find_pattern(exit_pattern, user_query):
+            return if_user_message_contains_exit_message
+        elif find_pattern(thanking_pattern, user_query):
+            return random.choice(positive_feedback_responses) + " " + feedback_suffix
+        else:
+            # fallback to doubt assistant
+            doubt_assistants_response = fallback_to_doubt_assistant(user_query, "", "")
+            return doubt_assistants_response
     else:
-        return faq_database['answers'][most_similar_index]
+        return faq_database['faq_answer'][most_similar_index]
 
 
 # This is the function for falling back to doubt assistant we can include doubt assistant as per our
 # requirements and availablity for now I am just keeping it simple and returning a static response.
 def fallback_to_doubt_assistant(user_query, bot_response, user_feedback):
-    return "Sorry! I am unable to understand you. So I am, redirecting you to a doubt assistant."
+    return "Sorry! I am unable to understand you. So I am, redirecting you to a doubt assistant. Your query will be resloved by doubt assistant sortly."
 
 
 def index(request):
@@ -93,11 +103,14 @@ def index(request):
 
 def chatbot(request):
     if request.method == 'GET':
-        # print('Received POST request:', request.GET)
+
+        #generating tags for all the questions and answers
+        generateAllTags()
+
         user_query = request.GET.get('userQuery')
         user_feedback = request.GET.get('userFeedback')
         bot_response = request.GET.get('botResponse')
-        # print('Received userQuery:', user_query)
+
         response = handle_user_feedback(user_query, bot_response, user_feedback)
 
         return JsonResponse({'response': response})

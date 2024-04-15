@@ -46,9 +46,25 @@ from nltk.corpus import words
 
 correct_words = words.words()
 
-exit_words = {'bye', 'exit', 'goodbye', 'quit'}
+# exit pattern
+exit_words = ['bye', 'exit', 'goodbye', 'quit', 'good night']
+exit_pattern = '|'.join(exit_words)
+
+# greeting pattern
+greeting_words = ['hi', 'hello', 'hey', 'howdy', 'good morning', 'good afternoon', 'good evening']
+greeting_pattern = '|'.join(greeting_words)
+
+# thanking
+thanking_words = ['thank', 'thanks']
+thanking_pattern = '|'.join(thanking_words)
+
+# this is the threshold value for similarity matching if the similarity comes less than this then it considered that
+# our faq database doesn't have answer for this query
 threshold_value = 0.1
+
 feedback_suffix = "If you need any more help or have further questions, feel free to ask."
+
+# for now I am using csv file for faq database which will consists of questions, answers and tags
 faq_database_csv_path = '/home/gopi/Desktop/my-projects/chatbot_app/chatbotapp/faqs_database.csv'
 positive_feedback_responses = [
     "Thank you!",
@@ -60,7 +76,15 @@ positive_feedback_responses = [
     "My pleasure!"
 ]
 
+if_user_message_contains_greeting = "Hello! How can I assist you today?"
+
+if_user_message_contains_exit_message = "Sure, feel free to reach out anytime if you have more questions. Have a great day!"
+
 faq_database = pd.read_csv(faq_database_csv_path)
+
+
+def find_pattern(pattern_to_search, user_message):
+    return re.search(r'\b(' + pattern_to_search + r')\b', user_message, re.IGNORECASE)
 
 
 # this is a function for checking for spelling mistakes in the words and returning the closest correct word present
@@ -78,7 +102,7 @@ def check_for_spelling_mistakes(givenWord):
         closest_word = sorted(temp, key=lambda val: val[0])[0][1]
         return closest_word
     except Exception as e:
-        print(f"Error in check_for_spelling_mistakes: {e}")
+        # print(f"Error in check_for_spelling_mistakes: {e}")
         return givenWord
 
 

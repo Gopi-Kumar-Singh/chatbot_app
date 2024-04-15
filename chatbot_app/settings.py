@@ -82,17 +82,17 @@ WSGI_APPLICATION = 'chatbot_app.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'my_global_database',
-        'USER': 'root',
-        'PASSWORD': 'Password@123',
-        'HOST': 'localhost',  # Or the IP address of your MySQL server
-        'PORT': '3306',  # Or the port your MySQL server is running on
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
-    }
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.mysql',
+    #     'NAME': 'your_database',
+    #     'USER': 'your_user_name',
+    #     'PASSWORD': 'your_password',
+    #     'HOST': 'localhost',  # Or the IP address of your MySQL server
+    #     'PORT': '3306',  # Or the port your MySQL server is running on
+    #     'OPTIONS': {
+    #         'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+    #     },
+    # }
 }
 
 # Password validation
