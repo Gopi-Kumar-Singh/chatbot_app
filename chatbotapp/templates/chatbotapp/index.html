@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>chatbot</title>
+</head>
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'chatbotapp/styles.css' %}">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+</head>
+
+<body>
+  <div id="content" style="margin: 0; padding: 0;">
+    <iframe width="100%" height="100%" frameborder="0" src="https://www.gtu.ac.in/"></iframe>
+  </div>
+  <div id="chatbot-icon">
+    <img src="{% static 'chatbotapp/images/chatbot.png' %}" alt="Chatbot Icon">
+  </div>
+  <div id="chat-window">
+    <!-- Chat messages will be dynamically added here -->
+    <div class="chatbot-container">
+      <div class="chatbot-header">
+        <h1>ChatBot</h1>
+      </div>
+      <div class="chatbot-body" id="chatbox"></div>
+      <div class="chatbot-input">
+        <input type="text" id="input" placeholder="Enter your message..." required>
+        <button onclick="processInput()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    const chatbotIcon = document.getElementById('chatbot-icon');
+    const chatWindow = document.getElementById('chat-window');
+
+    function toggleChatWindow() {
+      chatWindow.classList.toggle('open');
+      if (chatWindow.style.display === 'none') {
+        chatWindow.style.display = 'block';
+      } else {
+        chatWindow.style.display = 'none';
+      }
+    }
+    // Toggle chat window visibility when the chatbot icon is clicked
+    chatbotIcon.addEventListener('click', toggleChatWindow);
+
+    // Global variable to track the most recent bot message
+    let lastBotMessage = null;
+
+    let required = true;
+
+    let notRequired = false;
+
+    function addMessageIntoChatWindow(sender, message, userQuery, feedbackRequired) {
+
+      var chatbox = document.getElementById("chatbox");
+      var newMessage = document.createElement("div");
+      newMessage.classList.add("chatbot-message");
+
+      var messageContent = "<p>" + message + "</p>";
+      var iconClass = sender === "You" ? "user-icon" : "bot-icon";
+      var messageClass = sender === "You" ? "user-message" : "bot-message";
+      var iconUrl = sender === "You" ? "{% static 'chatbotapp/images/user_icon.png' %}" : "{% static 'chatbotapp/images/chatbot.png' %}";
+
+      removeUserFeedback();
+
+      if (sender === "You") {
+        newMessage.innerHTML = `
+            <div class="message-container ${messageClass}">
+                <div class="message-content">${messageContent}</div>
+                <div class="icon-container">
+                    <img src="${iconUrl}" alt="${sender}" class="${iconClass}">
+                </div>
+            </div>
+        `;
+      } else {
+        newMessage.innerHTML = `
+            <div class="message-container ${messageClass}">
+                 <div class="icon-container">
+                    <img src="${iconUrl}" alt="${sender}" class="${iconClass}">
+                </div>
+                <div class="message-content">${messageContent}</div>
+            </div>
+        `;
+
+        // Update lastBotMessage when displaying a bot message
+        lastBotMessage = newMessage;
+      }
+
+      if (sender != "You" && feedbackRequired === true) {
+        lastBotMessage.innerHTML += `
+            <div class="user-feedback">
+                <div class="user-feedback-text">Are you satisfied with the response ?</div>
+                <button class="satisfied-button" onclick="feedback('Yes','${userQuery}', '${message}')">Yes</button>
+                <button class="not-satisfied-button" onclick="feedback('No', '${userQuery}', '${message}')">No</button>
+            </div>
+        `;
+      }
+
+      chatbox.appendChild(newMessage);
+      chatbox.scrollTop = chatbox.scrollHeight;
+
+    }
+
+    // for removing previous feedback
+    function removeUserFeedback() {
+      if (lastBotMessage) {
+        const userFeedback = lastBotMessage.querySelector(".user-feedback");
+        if (userFeedback) {
+          userFeedback.remove();
+        }
+      }
+    }
+
+    addMessageIntoChatWindow('Bot', "Hello User, How can I help you?", "", notRequired);
+
+    function processInput() {
+      var input = document.getElementById("input");
+      var userQuery = input.value;
+      var userFeedback = "";
+      addMessageIntoChatWindow("You", userQuery, userQuery, notRequired);
+
+      $.get('/chatbot', { userQuery: userQuery, userFeedback: userFeedback, botResponse: "" }).done(function (data) {
+        addMessageIntoChatWindow("Bot", data['response'], userQuery, required);
+      })
+      // TODO: Implement your bot's response generation logic here
+
+      input.value = "";
+    }
+
+    document.getElementById("input").addEventListener("keydown", function (e) {
+      if (e.keyCode === 13) {
+        processInput();
+      }
+    });
+
+    function feedback(userFeedback, userQuery, botResponse) {
+      console.log("In feedback function");
+
+      // sending feedback to the backend with the original user query and bot response
+      if (userFeedback === "Yes") {
+        $.get('/chatbot', { userQuery: userQuery, userFeedback: userFeedback, botResponse: botResponse }).done(function (data) {
+          addMessageIntoChatWindow("Bot", data['response'], userQuery, notRequired);
+        })
+      }
+      else {
+        $.get('/chatbot', { userQuery: userQuery, userFeedback: userFeedback, botResponse: botResponse }).done(function (data) {
+          addMessageIntoChatWindow("Bot", data['response'], userQuery, required);
+        })
+      }
+
+    }
+
+  </script>
+</body>
+
+</html>
