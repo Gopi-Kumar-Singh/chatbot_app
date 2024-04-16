@@ -2,6 +2,9 @@
 
 ChatBot is a user-friendly Django-based chatbot project designed to provide an easy-to-use conversational interface. With ChatBot, you can quickly set up and deploy your own chatbot for various purposes, from customer service to fun interactions.
 
+## Here is the demo video of my chat bot
+https://github.com/Gopi-Kumar-Singh/chatbot_app/assets/92583046/781da943-4dc2-447b-84df-92724c74f9c9
+
 ## Installation
 
 ### Prerequisites
@@ -54,8 +57,4 @@ To start the development server, run:
 python manage.py runserver
 ```
 
-
-## Here is the demo video of my chat bot
-
-https://github.com/Gopi-Kumar-Singh/chatbot_app/assets/92583046/781da943-4dc2-447b-84df-92724c74f9c9
 
