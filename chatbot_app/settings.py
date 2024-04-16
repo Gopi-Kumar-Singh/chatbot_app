@@ -69,7 +69,7 @@ TEMPLATES = [
 # api/wsgi.py
 app = get_wsgi_application()
 
-WSGI_APPLICATION = 'chatbot_app.wsgi.application'
+WSGI_APPLICATION = 'chatbot_app.wsgi.app'
 
 
 # Database
