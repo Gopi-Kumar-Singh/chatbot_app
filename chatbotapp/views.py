@@ -6,11 +6,12 @@ from datetime import timedelta
 import csv
 
 
-#Apply the generate_tags function to create the 'tags' column of all the current question and answer if tags are not added
+# Apply the generate_tags function to create the 'tags' column of all the current question and answer if tags are not added
 def generateAllTags():
     if 'tags' not in faq_database.columns:
         faq_database['tags'] = faq_database.apply(lambda row: generate_tags(row['questions'], row['answers']), axis=1)
         faq_database.to_csv(faq_database_csv_path, index=False)
+
 
 # initializing vectorizer
 vectorizer = TfidfVectorizer()
@@ -19,14 +20,25 @@ vectorizer = TfidfVectorizer()
 stored_tags_vector = vectorizer.fit_transform(faq_database['tags'])
 
 
+def check_if_answer_already_exists_in_faq_database(answer_to_check):
+    # Check if the answer exists in the specified column
+    answer_exists = any(faq_database["faq_answer"] == answer_to_check)
+    return answer_exists
+
+
+#if you want to add faq query to faq database csv file
 def save_faq_to_faq_database(faq_question, faq_answer):
+
+    global stored_tags_vector
     faq_tags = generate_tags(faq_question, faq_answer)
-    new_faq_data = {'questions': faq_question, 'answers': faq_answer, 'tags': faq_tags}
+    new_faq_data = {'faq_question': faq_question, 'faq_answer': faq_answer, 'tags': faq_tags}
     # Add the new row using loc[]
     faq_database.loc[len(faq_database)] = new_faq_data
     faq_database.to_csv(faq_database_csv_path, index=False)
+    stored_tags_vector = vectorizer.fit_transform(faq_database['tags'])
 
 
+# if you want to add faq query to faq database
 def add_query_to_faq_database(faq_question, faq_answer):
     faq_tags = generate_tags(faq_question, faq_answer)
     new_faq_data = FAQ.objects.create(
@@ -45,16 +57,25 @@ def integrate_faq_database(faq_database):
         save_faq_to_faq_database(faq['question'], faq['answer'])
 
 
-def handle_user_feedback(user_query, bot_response, user_feedback):
-    if user_feedback == 'Yes':
+def handle_user_feedback(user_query, bot_response, user_feedback_for_last_response):
+    global is_feedback_required_for_current_response
+
+    if user_feedback_for_last_response == 'like':
+
         # saving the response of the faq if it is given by doubt assistant and user is satisfied with it
-        save_faq_to_faq_database(user_query, bot_response)
-        # ending the session as the user is satisfied
+        if user_query and bot_response and not check_if_answer_already_exists_in_faq_database(bot_response):
+            # print(user_query)
+            # print(bot_response)
+            save_faq_to_faq_database(user_query, bot_response)
+
+        # ending the session as the user is satisfied by not taking feedback
+        is_feedback_required_for_current_response = "No"
+
         return random.choice(positive_feedback_responses) + " " + feedback_suffix
 
-    elif user_feedback == 'No':
+    elif user_feedback_for_last_response == 'dislike':
         # user is not satisfied so falling back the user query to the doubt assistant
-        return fallback_to_doubt_assistant(user_query, bot_response, user_feedback)
+        return fallback_to_doubt_assistant(user_query, bot_response, user_feedback_for_last_response)
 
     else:
         # this is not a user feedback, it is a user query so for this getting response from our faq database
@@ -62,6 +83,9 @@ def handle_user_feedback(user_query, bot_response, user_feedback):
 
 
 def get_response_from_faq_database(user_query):
+    # using global variable
+    global is_feedback_required_for_current_response
+
     # user query preprocessing
     preprocessed_user_query = preprocess_text(user_query)
 
@@ -77,6 +101,8 @@ def get_response_from_faq_database(user_query):
 
     if most_similar_score < threshold_value:
 
+        is_feedback_required_for_current_response = "No"
+
         if find_pattern(greeting_pattern, user_query):
             return if_user_message_contains_greeting
         elif find_pattern(exit_pattern, user_query):
@@ -88,13 +114,22 @@ def get_response_from_faq_database(user_query):
             doubt_assistants_response = fallback_to_doubt_assistant(user_query, "", "")
             return doubt_assistants_response
     else:
+        is_feedback_required_for_current_response = "Yes"
         return faq_database['faq_answer'][most_similar_index]
 
 
 # This is the function for falling back to doubt assistant we can include doubt assistant as per our
 # requirements and availablity for now I am just keeping it simple and returning a static response.
 def fallback_to_doubt_assistant(user_query, bot_response, user_feedback):
-    return "Sorry! I am unable to understand you. So I am, redirecting you to a doubt assistant. Your query will be resloved by doubt assistant sortly."
+    # as right now we don't have any doubt assistant in the backend to solve the query that's why we are giving this static response and setting
+    # feedback as not required for now but when the doubt assistant will be their we can easily send their response and set feedback required to True for taking user feedback
+
+    global is_feedback_required_for_current_response
+
+    # when their will be a doubt assistant to respond we will get their response and set the is_feedback_required_for_current_response variable as "Yes"
+    is_feedback_required_for_current_response = "No"
+
+    return "Sorry! I am unable to understand you. So I am, sending your query to a doubt assistant. Your query will be resolved by doubt assistant very sortly."
 
 
 def index(request):
@@ -104,16 +139,17 @@ def index(request):
 def chatbot(request):
     if request.method == 'GET':
 
-        #generating tags for all the questions and answers
+        # generating tags for all the questions and answers
         generateAllTags()
 
         user_query = request.GET.get('userQuery')
-        user_feedback = request.GET.get('userFeedback')
+        user_feedback_for_last_response = request.GET.get('userFeedback')
         bot_response = request.GET.get('botResponse')
 
-        response = handle_user_feedback(user_query, bot_response, user_feedback)
+        response = handle_user_feedback(user_query, bot_response, user_feedback_for_last_response)
 
-        return JsonResponse({'response': response})
+        return JsonResponse(
+            {'response': response, 'isUserFeedbackRequiredForThisResponse': is_feedback_required_for_current_response})
     else:
         return JsonResponse({'error': 'Only GET requests are allowed for this endpoint.'})
 

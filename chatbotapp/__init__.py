@@ -47,11 +47,11 @@ from nltk.corpus import words
 correct_words = words.words()
 
 # exit pattern
-exit_words = ['bye', 'exit', 'goodbye', 'quit', 'good night']
+exit_words = ['bye', 'exit', 'goodbye', 'quit', 'goodnight', 'oksure']
 exit_pattern = '|'.join(exit_words)
 
 # greeting pattern
-greeting_words = ['hi', 'hello', 'hey', 'howdy', 'good morning', 'good afternoon', 'good evening']
+greeting_words = ['hi', 'hello', 'hey', 'howdy', 'goodmorning', 'goodafternoon', 'goodevening']
 greeting_pattern = '|'.join(greeting_words)
 
 # thanking
@@ -60,7 +60,10 @@ thanking_pattern = '|'.join(thanking_words)
 
 # this is the threshold value for similarity matching if the similarity comes less than this then it considered that
 # our faq database doesn't have answer for this query
-threshold_value = 0.1
+threshold_value = 0.2
+
+# declaring a global variable for checking if feedback is required or not for current response, and setting defaulf value as true
+is_feedback_required_for_current_response = "Yes"
 
 feedback_suffix = "If you need any more help or have further questions, feel free to ask."
 
