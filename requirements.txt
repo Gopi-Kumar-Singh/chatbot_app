@@ -4,7 +4,6 @@ colorama==0.4.6
 Django==4.2.11
 django-cors-headers==4.3.1
 joblib==1.4.0
-mysqlclient==2.2.4
 nltk==3.8.1
 numpy==1.24.4
 pandas==2.0.3
